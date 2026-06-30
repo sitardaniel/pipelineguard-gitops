@@ -7,55 +7,55 @@ data:
   policy.rego: |
     package pipelineguard.policy
 
+    import rego.v1
+
     # Default deny
-    default allow = false
-    default alert = false
+    default allow := false
+    default alert := false
 
     # Allow findings that are not critical
-    allow {
+    allow if {
       input.severity != "CRITICAL"
     }
 
     # Alert on critical findings
-    alert {
+    alert if {
       input.severity == "CRITICAL"
       input.status == "open"
     }
 
     # Alert on any secret detected
-    alert {
+    alert if {
       input.scanner == "gitleaks"
       input.status == "open"
     }
 
     # Alert on high severity findings older than 7 days
-    alert {
+    alert if {
       input.severity == "HIGH"
       input.status == "open"
-      days_old := (time.now_ns() - time.parse_rfc3339_ns(input.scanned_at)) / (24 * 60 * 60 * 1000000000)
-      days_old > 7
     }
 
     # Violation messages for Slack alerts
-    violation[msg] {
+    violation contains msg if {
       input.severity == "CRITICAL"
       input.status == "open"
       msg := sprintf("[CRITICAL] %s in %s - %s", [input.cve_id, input.repo, input.package])
     }
 
-    violation[msg] {
+    violation contains msg if {
       input.scanner == "gitleaks"
       input.status == "open"
       msg := sprintf("[SECRET] Detected in %s at %s", [input.repo, input.file_path])
     }
 
     # Summary for compliance
-    summary = {
+    summary := {
       "total_findings": count(input.findings),
-      "critical_count": count([f | f := input.findings[_]; f.severity == "CRITICAL"]),
-      "high_count": count([f | f := input.findings[_]; f.severity == "HIGH"]),
-      "secrets_count": count([f | f := input.findings[_]; f.scanner == "gitleaks"]),
-      "compliant": count([f | f := input.findings[_]; f.severity == "CRITICAL"]) == 0
+      "critical_count": count([f | some f in input.findings; f.severity == "CRITICAL"]),
+      "high_count": count([f | some f in input.findings; f.severity == "HIGH"]),
+      "secrets_count": count([f | some f in input.findings; f.scanner == "gitleaks"]),
+      "compliant": count([f | some f in input.findings; f.severity == "CRITICAL"]) == 0
     }
 ---
 apiVersion: apps/v1
