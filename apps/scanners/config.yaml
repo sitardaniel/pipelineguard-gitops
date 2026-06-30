@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scanner-config
+  namespace: pipelineguard
+data:
+  # Target repositories to scan
+  TARGET_REPOS: |
+    https://github.com/sitardaniel/pipelineguard-app
+    https://github.com/sitardaniel/pipelineguard-infra
+  # Scan output directory
+  OUTPUT_DIR: /results
+  # Severity threshold
+  SEVERITY_THRESHOLD: MEDIUM
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: scan-results-pvc
+  namespace: pipelineguard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi

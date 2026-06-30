@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: result-normalizer
+  namespace: pipelineguard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: result-normalizer
+  template:
+    metadata:
+      labels:
+        app: result-normalizer
+    spec:
+      containers:
+      - name: normalizer
+        image: pipelineguard/result-normalizer:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DB_HOST
+          value: postgresql
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: pipelineguard
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: POSTGRES_PASSWORD
+        - name: RESULTS_DIR
+          value: /results
+        - name: POLL_INTERVAL
+          value: "30"
+        volumeMounts:
+        - name: results
+          mountPath: /results
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+      volumes:
+      - name: results
+        persistentVolumeClaim:
+          claimName: scan-results-pvc

@@ -1,0 +1,82 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gitleaks-scanner
+  namespace: pipelineguard
+spec:
+  schedule: "30 */6 * * *"  # Every 6 hours, 30 min offset
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: gitleaks-scanner
+            scanner: gitleaks
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+          - name: git-clone
+            image: alpine/git:latest
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /repos
+              echo "Cloning pipelineguard-app (full history for secret scanning)..."
+              git clone https://github.com/sitardaniel/pipelineguard-app.git /repos/pipelineguard-app
+              echo "Cloning pipelineguard-infra..."
+              git clone https://github.com/sitardaniel/pipelineguard-infra.git /repos/pipelineguard-infra
+              echo "Clone complete"
+            volumeMounts:
+            - name: repos
+              mountPath: /repos
+          containers:
+          - name: gitleaks
+            image: zricethezav/gitleaks:latest
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /results
+              TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+              echo "Scanning pipelineguard-app for secrets..."
+              gitleaks detect --source /repos/pipelineguard-app \
+                --report-format json \
+                --report-path /results/gitleaks-app-${TIMESTAMP}.json \
+                --exit-code 0 || true
+
+              echo "Scanning pipelineguard-infra for secrets..."
+              gitleaks detect --source /repos/pipelineguard-infra \
+                --report-format json \
+                --report-path /results/gitleaks-infra-${TIMESTAMP}.json \
+                --exit-code 0 || true
+
+              echo "Scan complete. Results:"
+              ls -la /results/
+            volumeMounts:
+            - name: repos
+              mountPath: /repos
+              readOnly: true
+            - name: results
+              mountPath: /results
+            resources:
+              limits:
+                memory: "256Mi"
+                cpu: "500m"
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+          volumes:
+          - name: repos
+            emptyDir: {}
+          - name: results
+            persistentVolumeClaim:
+              claimName: scan-results-pvc

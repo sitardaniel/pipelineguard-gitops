@@ -1,0 +1,81 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: checkov-scanner
+  namespace: pipelineguard
+spec:
+  schedule: "15 */6 * * *"  # Every 6 hours, 15 min offset
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: checkov-scanner
+            scanner: checkov
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+          - name: git-clone
+            image: alpine/git:latest
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /repos
+              echo "Cloning pipelineguard-infra..."
+              git clone --depth 1 https://github.com/sitardaniel/pipelineguard-infra.git /repos/pipelineguard-infra
+              echo "Clone complete"
+            volumeMounts:
+            - name: repos
+              mountPath: /repos
+          containers:
+          - name: checkov
+            image: bridgecrew/checkov:latest
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /results
+              TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+              echo "Scanning Terraform files..."
+              checkov -d /repos/pipelineguard-infra \
+                --framework terraform \
+                --output json \
+                --output-file-path /results \
+                --compact \
+                --soft-fail || true
+
+              # Rename output file with timestamp
+              if [ -f /results/results_json.json ]; then
+                mv /results/results_json.json /results/checkov-infra-${TIMESTAMP}.json
+              fi
+
+              echo "Scan complete. Results:"
+              ls -la /results/
+            volumeMounts:
+            - name: repos
+              mountPath: /repos
+              readOnly: true
+            - name: results
+              mountPath: /results
+            resources:
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+          volumes:
+          - name: repos
+            emptyDir: {}
+          - name: results
+            persistentVolumeClaim:
+              claimName: scan-results-pvc

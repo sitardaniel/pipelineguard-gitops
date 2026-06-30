@@ -1,0 +1,77 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: grype-scanner
+  namespace: pipelineguard
+spec:
+  schedule: "45 */6 * * *"  # Every 6 hours, 45 min offset
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: grype-scanner
+            scanner: grype
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+          - name: git-clone
+            image: alpine/git:latest
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /repos
+              echo "Cloning pipelineguard-app..."
+              git clone --depth 1 https://github.com/sitardaniel/pipelineguard-app.git /repos/pipelineguard-app
+              echo "Clone complete"
+            volumeMounts:
+            - name: repos
+              mountPath: /repos
+          containers:
+          - name: grype
+            image: anchore/grype:latest
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /results
+              TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+              echo "Updating Grype vulnerability database..."
+              grype db update || true
+
+              echo "Scanning pipelineguard-app for vulnerable dependencies..."
+              grype dir:/repos/pipelineguard-app \
+                --output json \
+                --file /results/grype-app-${TIMESTAMP}.json \
+                --fail-on critical || true
+
+              echo "Scan complete. Results:"
+              ls -la /results/
+            volumeMounts:
+            - name: repos
+              mountPath: /repos
+              readOnly: true
+            - name: results
+              mountPath: /results
+            resources:
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+          volumes:
+          - name: repos
+            emptyDir: {}
+          - name: results
+            persistentVolumeClaim:
+              claimName: scan-results-pvc

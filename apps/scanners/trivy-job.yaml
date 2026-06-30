@@ -1,0 +1,81 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trivy-scanner
+  namespace: pipelineguard
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: trivy-scanner
+            scanner: trivy
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+          # Clone repositories
+          - name: git-clone
+            image: alpine/git:latest
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /repos
+              echo "Cloning pipelineguard-app..."
+              git clone --depth 1 https://github.com/sitardaniel/pipelineguard-app.git /repos/pipelineguard-app
+              echo "Cloning pipelineguard-infra..."
+              git clone --depth 1 https://github.com/sitardaniel/pipelineguard-infra.git /repos/pipelineguard-infra
+              echo "Clone complete"
+            volumeMounts:
+            - name: repos
+              mountPath: /repos
+          containers:
+          - name: trivy
+            image: aquasec/trivy:latest
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /results
+              TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+              echo "Scanning pipelineguard-app..."
+              trivy fs --format json --severity MEDIUM,HIGH,CRITICAL \
+                --output /results/trivy-app-${TIMESTAMP}.json \
+                /repos/pipelineguard-app || true
+
+              echo "Scanning pipelineguard-infra..."
+              trivy config --format json --severity MEDIUM,HIGH,CRITICAL \
+                --output /results/trivy-infra-${TIMESTAMP}.json \
+                /repos/pipelineguard-infra || true
+
+              echo "Scan complete. Results:"
+              ls -la /results/
+            volumeMounts:
+            - name: repos
+              mountPath: /repos
+              readOnly: true
+            - name: results
+              mountPath: /results
+            resources:
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+          volumes:
+          - name: repos
+            emptyDir: {}
+          - name: results
+            persistentVolumeClaim:
+              claimName: scan-results-pvc

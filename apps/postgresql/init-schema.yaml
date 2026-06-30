@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init-schema
+  namespace: pipelineguard
+data:
+  init.sql: |
+    -- PipelineGuard Findings Schema
+    CREATE TABLE IF NOT EXISTS findings (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      repo          TEXT NOT NULL,
+      scanner       TEXT NOT NULL,
+      severity      TEXT NOT NULL,
+      cve_id        TEXT,
+      package       TEXT,
+      file_path     TEXT,
+      line_number   INTEGER,
+      description   TEXT,
+      fix_version   TEXT,
+      status        TEXT DEFAULT 'open',
+      scanned_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+      resolved_at   TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_findings_repo_severity ON findings (repo, severity);
+    CREATE INDEX IF NOT EXISTS idx_findings_scanned_at ON findings (scanned_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_findings_status ON findings (status);
+    CREATE INDEX IF NOT EXISTS idx_findings_scanner ON findings (scanner);
+
+    -- View for open critical/high findings
+    CREATE OR REPLACE VIEW critical_findings AS
+    SELECT * FROM findings
+    WHERE status = 'open'
+      AND severity IN ('CRITICAL', 'HIGH')
+    ORDER BY scanned_at DESC;
+
+    -- View for findings summary by repo
+    CREATE OR REPLACE VIEW findings_summary AS
+    SELECT
+      repo,
+      scanner,
+      severity,
+      COUNT(*) as count
+    FROM findings
+    WHERE status = 'open'
+    GROUP BY repo, scanner, severity
+    ORDER BY repo, scanner, severity;
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgresql-init-schema
+  namespace: pipelineguard
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: init-schema
+        image: postgres:15-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h postgresql -U pipelineguard; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          PGPASSWORD=$POSTGRES_PASSWORD psql -h postgresql -U pipelineguard -d pipelineguard -f /schema/init.sql
+          echo "Schema initialized successfully"
+        envFrom:
+        - secretRef:
+            name: postgresql-secret
+        volumeMounts:
+        - name: schema
+          mountPath: /schema
+      volumes:
+      - name: schema
+        configMap:
+          name: postgresql-init-schema
