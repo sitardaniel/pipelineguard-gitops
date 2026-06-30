@@ -1,0 +1,30 @@
+# Secrets — NEVER commit
+.env
+.env.*
+*.env
+!.env.example
+secrets/
+*.secret
+*.key
+*.pem
+
+# Helm
+charts/
+*.tgz
+
+# Local kubeconfig / kind artifacts
+kubeconfig
+*.kubeconfig
+kind-config-local.yaml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OPA test cache
+.opa/
