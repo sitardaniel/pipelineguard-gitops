@@ -81,13 +81,14 @@ spec:
         - --server
         - --addr=0.0.0.0:8181
         - --log-level=info
-        - /policies
+        - /policies/policy.rego
         ports:
         - containerPort: 8181
           name: http
         volumeMounts:
         - name: policy
-          mountPath: /policies
+          mountPath: /policies/policy.rego
+          subPath: policy.rego
           readOnly: true
         resources:
           limits:
