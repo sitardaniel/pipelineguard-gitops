@@ -1,6 +1,6 @@
-# 🛡️ PipelineGuard — GitOps
+# 🛡️ PipelineGuard - GitOps
 
-> GitOps configuration repository for PipelineGuard. This is the single source of truth for cluster state — everything Argo CD deploys lives here.
+> GitOps configuration repository for PipelineGuard. This is the single source of truth for cluster state - everything Argo CD deploys lives here.
 
 [![GitOps: Argo CD](https://img.shields.io/badge/GitOps-Argo%20CD-orange)](https://argo-cd.readthedocs.io/)
 [![Config: Helm](https://img.shields.io/badge/config-Helm-blue)](https://helm.sh/)
@@ -10,7 +10,7 @@
 
 ## What This Repo Contains
 
-This repo holds all Kubernetes manifests, Helm values, and Argo CD Application definitions for PipelineGuard. Nothing is applied to the cluster by hand — Argo CD watches this repo and reconciles the cluster to match.
+This repo holds all Kubernetes manifests, Helm values, and Argo CD Application definitions for PipelineGuard. Nothing is applied to the cluster by hand - Argo CD watches this repo and reconciles the cluster to match.
 
 | Repo | Purpose |
 |------|---------|
@@ -56,11 +56,11 @@ pipelineguard-gitops/
 
 ## GitOps Principles
 
-- **No manual `kubectl apply`** — all changes go through a PR to this repo
+- **No manual `kubectl apply`** - all changes go through a PR to this repo
 - **Argo CD auto-syncs** from `main` branch
-- **Image tags are pinned** — no `latest` tags in production manifests
-- **RBAC is explicit** — every component has a dedicated ServiceAccount with minimum permissions
-- **Secrets are never stored here** — Vault handles all credentials; manifests only contain Vault path references
+- **Image tags are pinned** - no `latest` tags in production manifests
+- **RBAC is explicit** - every component has a dedicated ServiceAccount with minimum permissions
+- **Secrets are never stored here** - Vault handles all credentials; manifests only contain Vault path references
 
 ---
 
