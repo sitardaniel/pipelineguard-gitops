@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opa-policy
+  namespace: pipelineguard
+data:
+  policy.rego: |
+    package pipelineguard.policy
+
+    # Default deny
+    default allow = false
+    default alert = false
+
+    # Allow findings that are not critical
+    allow {
+      input.severity != "CRITICAL"
+    }
+
+    # Alert on critical findings
+    alert {
+      input.severity == "CRITICAL"
+      input.status == "open"
+    }
+
+    # Alert on any secret detected
+    alert {
+      input.scanner == "gitleaks"
+      input.status == "open"
+    }
+
+    # Alert on high severity findings older than 7 days
+    alert {
+      input.severity == "HIGH"
+      input.status == "open"
+      days_old := (time.now_ns() - time.parse_rfc3339_ns(input.scanned_at)) / (24 * 60 * 60 * 1000000000)
+      days_old > 7
+    }
+
+    # Violation messages for Slack alerts
+    violation[msg] {
+      input.severity == "CRITICAL"
+      input.status == "open"
+      msg := sprintf("[CRITICAL] %s in %s - %s", [input.cve_id, input.repo, input.package])
+    }
+
+    violation[msg] {
+      input.scanner == "gitleaks"
+      input.status == "open"
+      msg := sprintf("[SECRET] Detected in %s at %s", [input.repo, input.file_path])
+    }
+
+    # Summary for compliance
+    summary = {
+      "total_findings": count(input.findings),
+      "critical_count": count([f | f := input.findings[_]; f.severity == "CRITICAL"]),
+      "high_count": count([f | f := input.findings[_]; f.severity == "HIGH"]),
+      "secrets_count": count([f | f := input.findings[_]; f.scanner == "gitleaks"]),
+      "compliant": count([f | f := input.findings[_]; f.severity == "CRITICAL"]) == 0
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  namespace: pipelineguard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+    spec:
+      containers:
+      - name: opa
+        image: openpolicyagent/opa:latest
+        args:
+        - run
+        - --server
+        - --addr=0.0.0.0:8181
+        - --log-level=info
+        - /policies
+        ports:
+        - containerPort: 8181
+          name: http
+        volumeMounts:
+        - name: policy
+          mountPath: /policies
+          readOnly: true
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8181
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8181
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: policy
+        configMap:
+          name: opa-policy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opa
+  namespace: pipelineguard
+spec:
+  selector:
+    app: opa
+  ports:
+  - port: 8181
+    targetPort: 8181
+    name: http
