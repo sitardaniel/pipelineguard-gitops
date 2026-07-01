@@ -22,14 +22,24 @@ spec:
           initContainers:
           - name: git-clone
             image: alpine/git:latest
+            env:
+            - name: TARGET_REPOS
+              valueFrom:
+                configMapKeyRef:
+                  name: scanner-config
+                  key: TARGET_REPOS
             command:
             - sh
             - -c
             - |
               set -e
               mkdir -p /repos
-              echo "Cloning pipelineguard-infra..."
-              git clone --depth 1 https://github.com/sitardaniel/pipelineguard-infra.git /repos/pipelineguard-infra
+              echo "$TARGET_REPOS" | while read -r repo; do
+                [ -z "$repo" ] && continue
+                repo_name=$(basename "$repo" .git)
+                echo "Cloning $repo_name..."
+                git clone --depth 1 "$repo" "/repos/$repo_name" || echo "Failed to clone $repo"
+              done
               echo "Clone complete"
             volumeMounts:
             - name: repos
@@ -45,18 +55,16 @@ spec:
               mkdir -p /results
               TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-              echo "Scanning Terraform files..."
-              checkov -d /repos/pipelineguard-infra \
-                --framework terraform \
-                --output json \
-                --output-file-path /results \
-                --compact \
-                --soft-fail || true
+              for repo_dir in /repos/*/; do
+                repo_name=$(basename "$repo_dir")
+                echo "Scanning $repo_name with Checkov..."
 
-              # Rename output file with timestamp
-              if [ -f /results/results_json.json ]; then
-                mv /results/results_json.json /results/checkov-infra-${TIMESTAMP}.json
-              fi
+                checkov -d "$repo_dir" \
+                  --framework terraform \
+                  --output json \
+                  --compact \
+                  --soft-fail > "/results/checkov-${repo_name}-${TIMESTAMP}.json" 2>/dev/null || true
+              done
 
               echo "Scan complete. Results:"
               ls -la /results/

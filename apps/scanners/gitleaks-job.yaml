@@ -22,16 +22,24 @@ spec:
           initContainers:
           - name: git-clone
             image: alpine/git:latest
+            env:
+            - name: TARGET_REPOS
+              valueFrom:
+                configMapKeyRef:
+                  name: scanner-config
+                  key: TARGET_REPOS
             command:
             - sh
             - -c
             - |
               set -e
               mkdir -p /repos
-              echo "Cloning pipelineguard-app (full history for secret scanning)..."
-              git clone https://github.com/sitardaniel/pipelineguard-app.git /repos/pipelineguard-app
-              echo "Cloning pipelineguard-infra..."
-              git clone https://github.com/sitardaniel/pipelineguard-infra.git /repos/pipelineguard-infra
+              echo "$TARGET_REPOS" | while read -r repo; do
+                [ -z "$repo" ] && continue
+                repo_name=$(basename "$repo" .git)
+                echo "Cloning $repo_name (full history)..."
+                git clone "$repo" "/repos/$repo_name" || echo "Failed to clone $repo"
+              done
               echo "Clone complete"
             volumeMounts:
             - name: repos
@@ -47,17 +55,15 @@ spec:
               mkdir -p /results
               TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-              echo "Scanning pipelineguard-app for secrets..."
-              gitleaks detect --source /repos/pipelineguard-app \
-                --report-format json \
-                --report-path /results/gitleaks-app-${TIMESTAMP}.json \
-                --exit-code 0 || true
+              for repo_dir in /repos/*/; do
+                repo_name=$(basename "$repo_dir")
+                echo "Scanning $repo_name for secrets..."
 
-              echo "Scanning pipelineguard-infra for secrets..."
-              gitleaks detect --source /repos/pipelineguard-infra \
-                --report-format json \
-                --report-path /results/gitleaks-infra-${TIMESTAMP}.json \
-                --exit-code 0 || true
+                gitleaks detect --source "$repo_dir" \
+                  --report-format json \
+                  --report-path "/results/gitleaks-${repo_name}-${TIMESTAMP}.json" \
+                  --exit-code 0 || true
+              done
 
               echo "Scan complete. Results:"
               ls -la /results/
