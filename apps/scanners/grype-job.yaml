@@ -46,7 +46,7 @@ spec:
               mountPath: /repos
           containers:
           - name: grype
-            image: anchore/grype:latest
+            image: anchore/grype:debug
             command:
             - sh
             - -c
@@ -56,13 +56,13 @@ spec:
               TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
               echo "Updating Grype vulnerability database..."
-              grype db update || true
+              /grype db update || true
 
               for repo_dir in /repos/*/; do
                 repo_name=$(basename "$repo_dir")
                 echo "Scanning $repo_name for vulnerable dependencies..."
 
-                grype "dir:$repo_dir" \
+                /grype "dir:$repo_dir" \
                   --output json \
                   --file "/results/grype-${repo_name}-${TIMESTAMP}.json" || true
               done
