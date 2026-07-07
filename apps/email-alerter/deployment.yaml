@@ -1,32 +1,36 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: slack-alerter-secret
+  name: email-alerter-secret
   namespace: pipelineguard
 type: Opaque
 stringData:
-  # Replace with real Slack webhook URL
-  webhook-url: ""
+  # Replace with real SMTP credentials
+  smtp-host: ""
+  smtp-user: ""
+  smtp-password: ""
+  alert-email-from: "pipelineguard@localhost"
+  alert-email-to: ""
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: slack-alerter
+  name: email-alerter
   namespace: pipelineguard
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: slack-alerter
+      app: email-alerter
   template:
     metadata:
       labels:
-        app: slack-alerter
+        app: email-alerter
     spec:
-      serviceAccountName: slack-alerter
+      serviceAccountName: email-alerter
       containers:
       - name: alerter
-        image: pipelineguard/slack-alerter:latest
+        image: pipelineguard/email-alerter:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: DB_HOST
@@ -45,16 +49,44 @@ spec:
             secretKeyRef:
               name: postgresql-secret
               key: POSTGRES_PASSWORD
-        - name: SLACK_WEBHOOK_URL
+        - name: SMTP_HOST
           valueFrom:
             secretKeyRef:
-              name: slack-alerter-secret
-              key: webhook-url
+              name: email-alerter-secret
+              key: smtp-host
+              optional: true
+        - name: SMTP_PORT
+          value: "587"
+        - name: SMTP_USER
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: smtp-user
+              optional: true
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: smtp-password
+              optional: true
+        - name: SMTP_USE_TLS
+          value: "true"
+        - name: ALERT_EMAIL_FROM
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: alert-email-from
+              optional: true
+        - name: ALERT_EMAIL_TO
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: alert-email-to
               optional: true
         - name: OPA_URL
           value: "http://opa:8181"
-        - name: POLL_INTERVAL
-          value: "60"
+        - name: CHECK_INTERVAL_SECONDS
+          value: "86400"  # once a day
         - name: ALERT_SEVERITIES
           value: "CRITICAL,HIGH"
         resources:
@@ -68,13 +100,13 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: slack-alerter
+  name: email-alerter
   namespace: pipelineguard
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: slack-alerter-role
+  name: email-alerter-role
   namespace: pipelineguard
 rules:
 - apiGroups: [""]
@@ -84,13 +116,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: slack-alerter-rolebinding
+  name: email-alerter-rolebinding
   namespace: pipelineguard
 subjects:
 - kind: ServiceAccount
-  name: slack-alerter
+  name: email-alerter
   namespace: pipelineguard
 roleRef:
   kind: Role
-  name: slack-alerter-role
+  name: email-alerter-role
   apiGroup: rbac.authorization.k8s.io

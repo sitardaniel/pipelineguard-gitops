@@ -12,6 +12,10 @@ data:
   OUTPUT_DIR: /results
   # Severity threshold
   SEVERITY_THRESHOLD: MEDIUM
+  # Notification settings - editable from the config-ui web interface
+  NOTIFY_SLACK_ENABLED: "true"
+  NOTIFY_EMAIL_ENABLED: "false"
+  NOTIFY_EMAIL_TO: ""
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
