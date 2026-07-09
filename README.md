@@ -24,30 +24,31 @@ This repo holds all Kubernetes manifests, Helm values, and Argo CD Application d
 
 ```
 pipelineguard-gitops/
-├── apps/
-│   ├── pipelineguard-app.yaml      # Argo CD Application for scanner jobs
-│   ├── grafana.yaml                # Argo CD Application for Grafana
-│   ├── prometheus.yaml             # Argo CD Application for Prometheus
-│   └── vault.yaml                  # Argo CD Application for Vault
-├── manifests/
-│   ├── namespaces/                 # Namespace definitions
-│   ├── rbac/                       # Service accounts + ClusterRoles
-│   ├── jobs/
-│   │   ├── trivy-job.yaml
-│   │   ├── checkov-job.yaml
-│   │   ├── gitleaks-job.yaml
-│   │   └── grype-job.yaml
-│   ├── cronjobs/
-│   │   └── scheduled-scan.yaml     # 24h scheduled full scan
-│   └── webhook-receiver/           # Webhook receiver deployment
-├── helm-values/
-│   ├── grafana-values.yaml
-│   ├── prometheus-values.yaml
-│   └── vault-values.yaml
-├── policies/
-│   └── opa/                        # OPA Rego policy files
+├── argocd-apps/                    # Argo CD Application definitions (one per component)
+│   ├── postgresql.yaml
+│   ├── scanners.yaml
+│   ├── normalizer.yaml
+│   ├── opa.yaml
+│   ├── vault.yaml
+│   ├── monitoring.yaml
+│   ├── webhook-receiver.yaml
+│   ├── slack-alerter.yaml
+│   └── email-alerter.yaml
+├── apps/                           # Raw Kubernetes manifests each Application points at
+│   ├── postgresql/
+│   ├── scanners/                   # trivy/checkov/gitleaks/grype CronJobs + scanner-config ConfigMap
+│   ├── normalizer/
+│   ├── opa/
+│   ├── vault/
+│   ├── monitoring/                 # namespace + kube-prometheus-stack Application + findings dashboard
+│   ├── webhook-receiver/
+│   ├── slack-alerter/
+│   ├── email-alerter/
+│   ├── config-ui/
+│   └── hello-world/                # smoke-test app used to validate the initial GitOps bootstrap
 ├── .github/
 │   └── ISSUE_TEMPLATE/
+├── kind-config.yaml                # Local kind cluster config used by the bootstrap steps below
 ├── SECURITY.md
 └── README.md
 ```
@@ -86,8 +87,8 @@ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/st
 # 3. Wait for Argo CD to be ready
 kubectl wait --for=condition=available --timeout=120s deployment/argocd-server -n argocd
 
-# 4. Apply the root app (app-of-apps pattern)
-kubectl apply -f apps/ -n argocd
+# 4. Register every component as an Argo CD Application
+kubectl apply -f argocd-apps/ -n argocd
 
 # 5. Port-forward Argo CD UI
 kubectl port-forward svc/argocd-server -n argocd 8080:443
@@ -99,12 +100,12 @@ Argo CD will now watch this repo and deploy all components automatically.
 
 ## Environments
 
-| Environment | Cluster        | Branch |
-|-------------|----------------|--------|
-| Local dev   | kind           | `main` |
-| Demo (AWS)  | EKS (on-demand)| `main` |
+| Environment | Cluster            | Branch |
+|-------------|---------------------|--------|
+| Local dev   | kind                | `main` |
+| Demo (AWS)  | single-node k3s (on-demand) | `main` |
 
-The EKS cluster is spun up only for demos using `pipelineguard-infra`, then torn down to minimize cost (~$5–15 per demo session).
+The AWS k3s node is spun up only for demos using `pipelineguard-infra`, then torn down to minimize cost.
 
 ---
 
