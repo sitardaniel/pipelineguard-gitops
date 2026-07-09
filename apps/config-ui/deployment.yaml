@@ -16,7 +16,7 @@ spec:
       serviceAccountName: config-ui
       containers:
       - name: config-ui
-        image: pipelineguard/config-ui:latest
+        image: ghcr.io/sitardaniel/pipelineguard-config-ui:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080

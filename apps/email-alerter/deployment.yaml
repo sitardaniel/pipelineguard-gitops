@@ -30,7 +30,7 @@ spec:
       serviceAccountName: email-alerter
       containers:
       - name: alerter
-        image: pipelineguard/email-alerter:latest
+        image: ghcr.io/sitardaniel/pipelineguard-email-alerter:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: DB_HOST

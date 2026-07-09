@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: normalizer
-        image: pipelineguard/result-normalizer:latest
+        image: ghcr.io/sitardaniel/pipelineguard-result-normalizer:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: DB_HOST
