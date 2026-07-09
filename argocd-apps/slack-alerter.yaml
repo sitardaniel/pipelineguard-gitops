@@ -12,12 +12,6 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: pipelineguard
-  ignoreDifferences:
-  - group: ""
-    kind: Secret
-    name: slack-alerter-secret
-    jsonPointers:
-    - /data
   syncPolicy:
     automated:
       prune: true

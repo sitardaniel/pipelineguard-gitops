@@ -21,23 +21,40 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        - name: GITHUB_USERNAME
+        - name: GITHUB_OAUTH_CLIENT_ID
           valueFrom:
             secretKeyRef:
               name: config-ui-secret
-              key: GITHUB_USERNAME
+              key: GITHUB_OAUTH_CLIENT_ID
               optional: true
-        - name: GITHUB_TOKEN
+        - name: GITHUB_OAUTH_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
               name: config-ui-secret
-              key: GITHUB_TOKEN
+              key: GITHUB_OAUTH_CLIENT_SECRET
               optional: true
-        - name: CONFIG_FILE
-          value: /config/repos.txt
-        volumeMounts:
-        - name: config
-          mountPath: /config
+        - name: OAUTH_REDIRECT_URI
+          valueFrom:
+            secretKeyRef:
+              name: config-ui-secret
+              key: OAUTH_REDIRECT_URI
+              optional: true
+        - name: DB_HOST
+          value: postgresql
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: pipelineguard
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret
+              key: POSTGRES_PASSWORD
         resources:
           limits:
             memory: "128Mi"
@@ -57,9 +74,6 @@ spec:
             port: 8080
           initialDelaySeconds: 3
           periodSeconds: 5
-      volumes:
-      - name: config
-        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -112,5 +126,7 @@ metadata:
   namespace: pipelineguard
 type: Opaque
 stringData:
-  GITHUB_USERNAME: "sitardaniel"
-  GITHUB_TOKEN: ""
+  # Populate with kubectl once the GitHub OAuth App is registered - never commit real values.
+  GITHUB_OAUTH_CLIENT_ID: ""
+  GITHUB_OAUTH_CLIENT_SECRET: ""
+  OAUTH_REDIRECT_URI: "http://localhost:8080/auth/callback"

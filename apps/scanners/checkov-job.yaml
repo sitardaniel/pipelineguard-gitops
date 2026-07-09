@@ -34,11 +34,16 @@ spec:
             - |
               set -e
               mkdir -p /repos
-              echo "$TARGET_REPOS" | while read -r repo; do
-                [ -z "$repo" ] && continue
-                repo_name=$(basename "$repo" .git)
-                echo "Cloning $repo_name..."
-                git clone --depth 1 "$repo" "/repos/$repo_name" || echo "Failed to clone $repo"
+              # TARGET_REPOS lines are "username::repo_url" - clone dir name
+              # carries the owner so normalizer can attribute findings per-user.
+              echo "$TARGET_REPOS" | while read -r line; do
+                [ -z "$line" ] && continue
+                username="${line%%::*}"
+                repo_url="${line#*::}"
+                repo_name=$(basename "$repo_url" .git)
+                clone_dir="/repos/${username}__${repo_name}"
+                echo "Cloning ${username}/${repo_name}..."
+                git clone --depth 1 "$repo_url" "$clone_dir" || echo "Failed to clone $repo_url"
               done
               echo "Clone complete"
             volumeMounts:

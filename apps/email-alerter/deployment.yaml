@@ -5,12 +5,11 @@ metadata:
   namespace: pipelineguard
 type: Opaque
 stringData:
-  # Replace with real SMTP credentials
+  # Replace with real SMTP credentials - one shared relay for every user's digest
   smtp-host: ""
   smtp-user: ""
   smtp-password: ""
   alert-email-from: "pipelineguard@localhost"
-  alert-email-to: ""
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -77,12 +76,6 @@ spec:
               name: email-alerter-secret
               key: alert-email-from
               optional: true
-        - name: ALERT_EMAIL_TO
-          valueFrom:
-            secretKeyRef:
-              name: email-alerter-secret
-              key: alert-email-to
-              optional: true
         - name: OPA_URL
           value: "http://opa:8181"
         - name: CHECK_INTERVAL_SECONDS
@@ -102,27 +95,3 @@ kind: ServiceAccount
 metadata:
   name: email-alerter
   namespace: pipelineguard
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: email-alerter-role
-  namespace: pipelineguard
-rules:
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: email-alerter-rolebinding
-  namespace: pipelineguard
-subjects:
-- kind: ServiceAccount
-  name: email-alerter
-  namespace: pipelineguard
-roleRef:
-  kind: Role
-  name: email-alerter-role
-  apiGroup: rbac.authorization.k8s.io
