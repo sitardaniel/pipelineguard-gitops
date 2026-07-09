@@ -12,6 +12,12 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: pipelineguard
+  ignoreDifferences:
+  - group: ""
+    kind: ConfigMap
+    name: scanner-config
+    jsonPointers:
+    - /data
   syncPolicy:
     automated:
       prune: true
