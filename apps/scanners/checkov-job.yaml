@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: checkov-scanner
-  namespace: pipelineguard
+  namespace: baghguard
 spec:
   schedule: "15 */6 * * *"  # Every 6 hours, 15 min offset
   concurrencyPolicy: Forbid

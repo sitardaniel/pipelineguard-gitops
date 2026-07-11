@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: result-normalizer
-  namespace: pipelineguard
+  namespace: baghguard
 spec:
   replicas: 1
   selector:
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: normalizer
-        image: ghcr.io/sitardaniel/pipelineguard-result-normalizer:latest
+        image: ghcr.io/sitardaniel/baghguard-result-normalizer:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: DB_HOST
@@ -23,7 +23,7 @@ spec:
         - name: DB_PORT
           value: "5432"
         - name: DB_NAME
-          value: pipelineguard
+          value: baghguard
         - name: DB_USER
           valueFrom:
             secretKeyRef:

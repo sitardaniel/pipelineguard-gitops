@@ -2,20 +2,20 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: email-alerter-secret
-  namespace: pipelineguard
+  namespace: baghguard
 type: Opaque
 stringData:
   # Replace with real SMTP credentials - one shared relay for every user's digest
   smtp-host: ""
   smtp-user: ""
   smtp-password: ""
-  alert-email-from: "pipelineguard@localhost"
+  alert-email-from: "baghguard@localhost"
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: email-alerter
-  namespace: pipelineguard
+  namespace: baghguard
 spec:
   replicas: 1
   selector:
@@ -29,7 +29,7 @@ spec:
       serviceAccountName: email-alerter
       containers:
       - name: alerter
-        image: ghcr.io/sitardaniel/pipelineguard-email-alerter:latest
+        image: ghcr.io/sitardaniel/baghguard-email-alerter:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: DB_HOST
@@ -37,7 +37,7 @@ spec:
         - name: DB_PORT
           value: "5432"
         - name: DB_NAME
-          value: pipelineguard
+          value: baghguard
         - name: DB_USER
           valueFrom:
             secretKeyRef:
@@ -94,4 +94,4 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: email-alerter
-  namespace: pipelineguard
+  namespace: baghguard

@@ -11,7 +11,7 @@ spec:
     path: apps/scanners
   destination:
     server: https://kubernetes.default.svc
-    namespace: pipelineguard
+    namespace: baghguard
   ignoreDifferences:
   - group: ""
     kind: ConfigMap

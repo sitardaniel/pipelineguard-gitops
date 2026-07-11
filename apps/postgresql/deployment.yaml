@@ -1,24 +1,24 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: pipelineguard
+  name: baghguard
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: postgresql-secret
-  namespace: pipelineguard
+  namespace: baghguard
 type: Opaque
 stringData:
-  POSTGRES_USER: pipelineguard
+  POSTGRES_USER: baghguard
   POSTGRES_PASSWORD: localdevpassword
-  POSTGRES_DB: pipelineguard
+  POSTGRES_DB: baghguard
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgresql-pvc
-  namespace: pipelineguard
+  namespace: baghguard
 spec:
   accessModes:
     - ReadWriteOnce
@@ -30,7 +30,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgresql
-  namespace: pipelineguard
+  namespace: baghguard
 spec:
   replicas: 1
   selector:
@@ -64,7 +64,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - pipelineguard
+            - baghguard
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
@@ -76,7 +76,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgresql
-  namespace: pipelineguard
+  namespace: baghguard
 spec:
   selector:
     app: postgresql

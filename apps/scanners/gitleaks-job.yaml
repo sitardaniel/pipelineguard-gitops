@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: gitleaks-scanner
-  namespace: pipelineguard
+  namespace: baghguard
 spec:
   schedule: "30 */6 * * *"  # Every 6 hours, 30 min offset
   concurrencyPolicy: Forbid

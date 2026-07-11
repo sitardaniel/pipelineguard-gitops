@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: grype-scanner
-  namespace: pipelineguard
+  namespace: baghguard
 spec:
   schedule: "45 */6 * * *"  # Every 6 hours, 45 min offset
   concurrencyPolicy: Forbid

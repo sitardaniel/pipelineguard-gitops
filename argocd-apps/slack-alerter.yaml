@@ -11,7 +11,7 @@ spec:
     path: apps/slack-alerter
   destination:
     server: https://kubernetes.default.svc
-    namespace: pipelineguard
+    namespace: baghguard
   syncPolicy:
     automated:
       prune: true
