@@ -53,11 +53,27 @@ data:
     );
 
     CREATE TABLE IF NOT EXISTS user_notify_settings (
-      user_id        UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-      slack_webhook  TEXT,
-      slack_enabled  BOOLEAN NOT NULL DEFAULT false,
-      email_enabled  BOOLEAN NOT NULL DEFAULT false,
-      email_to       TEXT
+      user_id            UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      slack_webhook      TEXT,
+      slack_enabled      BOOLEAN NOT NULL DEFAULT false,
+      email_enabled      BOOLEAN NOT NULL DEFAULT false,
+      email_to           TEXT,
+      remediate_enabled  BOOLEAN NOT NULL DEFAULT false
+    );
+
+    ALTER TABLE user_notify_settings ADD COLUMN IF NOT EXISTS remediate_enabled BOOLEAN NOT NULL DEFAULT false;
+
+    -- Auto-remediation: at most one fix-PR attempt per finding, ever. A row
+    -- here (any status) means "don't retry this finding again" - this is
+    -- what keeps the remediator's poll loop idempotent.
+    CREATE TABLE IF NOT EXISTS remediation_prs (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      finding_id   UUID NOT NULL UNIQUE REFERENCES findings(id) ON DELETE CASCADE,
+      pr_url       TEXT,
+      branch_name  TEXT,
+      status       TEXT NOT NULL DEFAULT 'open', -- open, failed, unsupported
+      detail       TEXT,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
     ALTER TABLE findings ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id);
