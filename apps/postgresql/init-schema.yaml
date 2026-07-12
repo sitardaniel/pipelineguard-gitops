@@ -82,6 +82,32 @@ data:
     WHERE status = 'open'
     GROUP BY repo, scanner, severity
     ORDER BY repo, scanner, severity;
+
+    -- Dedup: re-scans of the same persistent issue should update the
+    -- existing row instead of inserting a new one every cycle. Collapse
+    -- any duplicates that already accumulated before this constraint
+    -- existed (most-recently-scanned row wins), then enforce uniqueness
+    -- going forward. COALESCE handles nullable columns (cve_id/package
+    -- are always NULL for gitleaks secret findings) since NULL <> NULL
+    -- would otherwise defeat a plain unique constraint on those columns.
+    DELETE FROM findings f
+    USING findings f2
+    WHERE f.id <> f2.id
+      AND f.repo = f2.repo
+      AND f.scanner = f2.scanner
+      AND COALESCE(f.file_path, '') = COALESCE(f2.file_path, '')
+      AND COALESCE(f.cve_id, '') = COALESCE(f2.cve_id, '')
+      AND COALESCE(f.package, '') = COALESCE(f2.package, '')
+      AND COALESCE(f.description, '') = COALESCE(f2.description, '')
+      AND (f.scanned_at, f.id) < (f2.scanned_at, f2.id);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_findings_dedup ON findings (
+      repo, scanner,
+      COALESCE(file_path, ''),
+      COALESCE(cve_id, ''),
+      COALESCE(package, ''),
+      COALESCE(description, '')
+    );
 ---
 apiVersion: batch/v1
 kind: Job
