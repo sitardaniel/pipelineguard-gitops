@@ -80,6 +80,23 @@ data:
     CREATE INDEX IF NOT EXISTS idx_findings_owner ON findings (owner_user_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions (expires_at);
 
+    -- Waitlist: signing in with GitHub no longer grants immediate access.
+    -- New accounts land as 'pending' and need an admin to approve them;
+    -- this stays on permanently, not just pre-launch.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'pending';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS notified_live_at TIMESTAMPTZ;
+
+    -- Grandfather in accounts that existed before this gate shipped, so
+    -- nobody already using BaghGuard gets locked out by the new default.
+    -- Fixed cutoff (not now()) so re-running this migration is idempotent
+    -- and never auto-approves genuinely new signups.
+    UPDATE users SET approval_status = 'approved'
+    WHERE approval_status = 'pending' AND created_at < '2026-07-13T00:00:00Z';
+
+    CREATE INDEX IF NOT EXISTS idx_users_approval_status ON users (approval_status);
+
     -- View for open critical/high findings
     CREATE OR REPLACE VIEW critical_findings AS
     SELECT * FROM findings

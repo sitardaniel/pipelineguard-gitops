@@ -55,6 +55,38 @@ spec:
             secretKeyRef:
               name: postgresql-secret
               key: POSTGRES_PASSWORD
+        - name: LAUNCH_AT
+          value: "2026-07-16T00:00:00Z"
+        - name: ADMIN_GITHUB_USERNAMES
+          value: "sitardaniel"
+        - name: SMTP_HOST
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: smtp-host
+              optional: true
+        - name: SMTP_PORT
+          value: "587"
+        - name: SMTP_USER
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: smtp-user
+              optional: true
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: smtp-password
+              optional: true
+        - name: SMTP_USE_TLS
+          value: "true"
+        - name: ALERT_EMAIL_FROM
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: alert-email-from
+              optional: true
         resources:
           limits:
             memory: "128Mi"
