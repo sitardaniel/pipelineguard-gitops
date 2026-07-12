@@ -91,9 +91,14 @@ data:
     -- Grandfather in accounts that existed before this gate shipped, so
     -- nobody already using BaghGuard gets locked out by the new default.
     -- Fixed cutoff (not now()) so re-running this migration is idempotent
-    -- and never auto-approves genuinely new signups.
+    -- and never auto-approves genuinely new signups. Must stay safely in
+    -- the past relative to real UTC time when this ships - a "local
+    -- today" date can still be UTC-yesterday for several hours, and this
+    -- job reruns on every ArgoCD sync, so a cutoff that's even briefly in
+    -- the future would keep auto-approving brand new signups until UTC
+    -- catches up to it.
     UPDATE users SET approval_status = 'approved'
-    WHERE approval_status = 'pending' AND created_at < '2026-07-13T00:00:00Z';
+    WHERE approval_status = 'pending' AND created_at < '2026-07-12T12:00:00Z';
 
     CREATE INDEX IF NOT EXISTS idx_users_approval_status ON users (approval_status);
 
