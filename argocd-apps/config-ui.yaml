@@ -18,6 +18,7 @@ spec:
     name: config-ui-secret
     jsonPointers:
     - /data
+    - /stringData
   syncPolicy:
     automated:
       prune: true

@@ -153,15 +153,3 @@ roleRef:
   kind: Role
   name: config-ui-role
   apiGroup: rbac.authorization.k8s.io
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: config-ui-secret
-  namespace: baghguard
-type: Opaque
-stringData:
-  # Populate with kubectl once the GitHub OAuth App is registered - never commit real values.
-  GITHUB_OAUTH_CLIENT_ID: ""
-  GITHUB_OAUTH_CLIENT_SECRET: ""
-  OAUTH_REDIRECT_URI: "http://localhost:8080/auth/callback"
