@@ -29,7 +29,6 @@ pipelineguard-gitops/
 │   ├── scanners.yaml
 │   ├── normalizer.yaml
 │   ├── opa.yaml
-│   ├── vault.yaml
 │   ├── monitoring.yaml
 │   ├── webhook-receiver.yaml
 │   ├── slack-alerter.yaml
@@ -39,7 +38,6 @@ pipelineguard-gitops/
 │   ├── scanners/                   # trivy/checkov/gitleaks/grype CronJobs + scanner-config ConfigMap
 │   ├── normalizer/
 │   ├── opa/
-│   ├── vault/
 │   ├── monitoring/                 # namespace + kube-prometheus-stack Application + findings dashboard
 │   ├── webhook-receiver/
 │   ├── slack-alerter/
@@ -61,7 +59,7 @@ pipelineguard-gitops/
 - **Argo CD auto-syncs** from `main` branch
 - **Image tags are pinned** - no `latest` tags in production manifests
 - **RBAC is explicit** - every component has a dedicated ServiceAccount with minimum permissions
-- **Secrets are never stored here** - Vault handles all credentials; manifests only contain Vault path references
+- **Real credentials are never committed here** - Secret manifests (`apps/*/secret.yaml`) hold blank placeholder values only; populate real values via `kubectl` once per cluster, out of band
 
 ---
 
