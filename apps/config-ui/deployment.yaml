@@ -59,7 +59,7 @@ spec:
               name: postgresql-secret
               key: POSTGRES_PASSWORD
         - name: LAUNCH_AT
-          value: "2026-07-16T00:00:00Z"
+          value: "2026-07-16T07:00:00Z"
         - name: ADMIN_GITHUB_USERNAMES
           value: "sitardaniel"
         - name: SMTP_HOST
