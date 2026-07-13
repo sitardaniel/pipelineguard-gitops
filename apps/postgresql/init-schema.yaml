@@ -153,7 +153,13 @@ metadata:
   name: postgresql-init-schema
   namespace: baghguard
 spec:
-  ttlSecondsAfterFinished: 300
+  # No ttlSecondsAfterFinished: this Job must persist after completion so
+  # ArgoCD sees it already matches desired state. If the completed Job gets
+  # garbage-collected, every auto-sync recreates it and reruns init.sql
+  # against the live DB - harmless while the script stays idempotent, but a
+  # future non-idempotent migration would then silently re-execute every
+  # sync interval. If this schema needs to change, give the Job a new name
+  # (e.g. a version/date suffix) rather than editing this one in place.
   template:
     spec:
       restartPolicy: OnFailure
