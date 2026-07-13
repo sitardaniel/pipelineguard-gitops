@@ -25,3 +25,10 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    # Without this, ignoreDifferences only hides the Secret from the diff/
+    # OutOfSync status - any sync triggered for an unrelated reason (e.g.
+    # the Deployment drifting) still re-applies the Secret's literal
+    # manifest content, wiping the real live credentials back to git's
+    # blank placeholders. RespectIgnoreDifferences makes sync itself skip
+    # the ignored fields too, not just status reporting.
+    - RespectIgnoreDifferences=true
