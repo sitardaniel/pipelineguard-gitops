@@ -12,9 +12,21 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: baghguard
+  ignoreDifferences:
+  - group: ""
+    kind: Secret
+    name: webhook-secret
+    jsonPointers:
+    - /data
+    - /stringData
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    # Without this, ignoreDifferences only hides the Secret from the diff/
+    # OutOfSync status - any sync triggered for an unrelated reason still
+    # re-applies its literal manifest content. See config-ui.yaml, where
+    # this was found the hard way on production.
+    - RespectIgnoreDifferences=true

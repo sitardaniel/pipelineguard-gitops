@@ -100,12 +100,3 @@ spec:
   - port: 80
     targetPort: 8080
     name: http
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: webhook-secret
-  namespace: baghguard
-type: Opaque
-stringData:
-  hmac-secret: "baghguard-webhook-secret-change-in-production"
