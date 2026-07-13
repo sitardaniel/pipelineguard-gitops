@@ -50,7 +50,10 @@ spec:
       containers:
       - name: webhook-receiver
         image: ghcr.io/sitardaniel/baghguard-webhook-receiver:latest
-        imagePullPolicy: IfNotPresent
+        # Always, not IfNotPresent: the tag is a floating :latest published by
+        # CI on every push - IfNotPresent would keep serving whatever digest
+        # a node happened to cache first, silently ignoring new builds.
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
           name: http

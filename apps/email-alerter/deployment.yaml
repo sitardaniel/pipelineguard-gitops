@@ -30,7 +30,10 @@ spec:
       containers:
       - name: alerter
         image: ghcr.io/sitardaniel/baghguard-email-alerter:latest
-        imagePullPolicy: IfNotPresent
+        # Always, not IfNotPresent: the tag is a floating :latest published by
+        # CI on every push - IfNotPresent would keep serving whatever digest
+        # a node happened to cache first, silently ignoring new builds.
+        imagePullPolicy: Always
         env:
         - name: DB_HOST
           value: postgresql
