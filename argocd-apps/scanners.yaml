@@ -24,3 +24,9 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    # Without this, ignoreDifferences only hides scanner-config from the
+    # diff/OutOfSync status - any sync triggered for an unrelated reason
+    # still re-applies its literal (blank) TARGET_REPOS, silently deleting
+    # every user's saved repo selection. Same root cause as the Secret
+    # fixes in config-ui.yaml etc., just hitting a ConfigMap instead.
+    - RespectIgnoreDifferences=true
