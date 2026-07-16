@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: normalizer
-        image: ghcr.io/sitardaniel/baghguard-result-normalizer:bc369701cd965ef5a4d3b1cb1d185cd5e08dba2f
+        image: ghcr.io/sitardaniel/baghguard-result-normalizer:207cdc8f2e9a3e4a822d5f1131326afa2f5463cb
         # IfNotPresent, not Always: the tag is now the immutable commit SHA
         # that built it (bumped in this manifest by build-images.yml's
         # update-gitops-manifests job) - a given tag never points to a
