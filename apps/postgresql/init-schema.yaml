@@ -146,6 +146,24 @@ data:
       COALESCE(package, ''),
       COALESCE(description, '')
     );
+
+    -- line_number wasn't part of the dedup key above, so two genuinely
+    -- distinct violations in the same file (e.g. the same Checkov check
+    -- firing on two separate resource blocks) collided on an identical
+    -- key - a single scan's batch insert could then contain two rows
+    -- targeting the same key, which ON CONFLICT DO UPDATE cannot handle
+    -- within one multi-row INSERT ("cannot affect row a second time").
+    -- Widening the key only splits existing groups more finely, never
+    -- merges them, so there's nothing to collapse - just rebuild the index.
+    DROP INDEX IF EXISTS idx_findings_dedup;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_findings_dedup ON findings (
+      repo, scanner,
+      COALESCE(file_path, ''),
+      COALESCE(cve_id, ''),
+      COALESCE(package, ''),
+      COALESCE(description, ''),
+      COALESCE(line_number, -1)
+    );
 ---
 apiVersion: batch/v1
 kind: Job
