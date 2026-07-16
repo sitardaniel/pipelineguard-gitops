@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webhook-receiver
+  namespace: baghguard
+  annotations:
+    # No cert-manager.io/cluster-issuer here on purpose: config-ui's Ingress
+    # (apps/config-ui/ingress.yaml) already requests and owns the cert for
+    # baghguard.com. Re-adding the annotation here would trigger a second,
+    # redundant ACME request for the same host - just reuse the secret it
+    # already issues into.
+    traefik.ingress.kubernetes.io/router.middlewares: baghguard-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - baghguard.com
+    secretName: config-ui-tls
+  rules:
+  - host: baghguard.com
+    http:
+      paths:
+      - path: /webhook
+        pathType: Prefix
+        backend:
+          service:
+            name: webhook-receiver
+            port:
+              number: 80
