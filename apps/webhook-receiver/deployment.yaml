@@ -49,7 +49,7 @@ spec:
       serviceAccountName: webhook-receiver
       containers:
       - name: webhook-receiver
-        image: ghcr.io/sitardaniel/baghguard-webhook-receiver:latest
+        image: ghcr.io/sitardaniel/baghguard-webhook-receiver:46afc6013279e2b728feb2f0c8caf1468ceb5660
         # Always, not IfNotPresent: the tag is a floating :latest published by
         # CI on every push - IfNotPresent would keep serving whatever digest
         # a node happened to cache first, silently ignoring new builds.
