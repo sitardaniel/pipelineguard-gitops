@@ -17,10 +17,11 @@ spec:
       containers:
       - name: remediator
         image: ghcr.io/sitardaniel/baghguard-remediator:46afc6013279e2b728feb2f0c8caf1468ceb5660
-        # Always, not IfNotPresent: the tag is a floating :latest published by
-        # CI on every push - IfNotPresent would keep serving whatever digest
-        # a node happened to cache first, silently ignoring new builds.
-        imagePullPolicy: Always
+        # IfNotPresent, not Always: the tag is now the immutable commit SHA
+        # that built it (bumped in this manifest by build-images.yml's
+        # update-gitops-manifests job) - a given tag never points to a
+        # different image, so there's nothing to re-check on every restart.
+        imagePullPolicy: IfNotPresent
         env:
         - name: DB_HOST
           value: postgresql
