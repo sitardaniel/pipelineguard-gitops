@@ -1,3 +1,13 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-webhook-prefix
+  namespace: baghguard
+spec:
+  stripPrefix:
+    prefixes:
+    - /webhook
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -9,7 +19,7 @@ metadata:
     # baghguard.com. Re-adding the annotation here would trigger a second,
     # redundant ACME request for the same host - just reuse the secret it
     # already issues into.
-    traefik.ingress.kubernetes.io/router.middlewares: baghguard-redirect-https@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: baghguard-redirect-https@kubernetescrd,baghguard-strip-webhook-prefix@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
