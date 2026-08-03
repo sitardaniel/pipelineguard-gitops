@@ -16,7 +16,7 @@ spec:
       serviceAccountName: slack-alerter
       containers:
       - name: alerter
-        image: ghcr.io/sitardaniel/baghguard-slack-alerter:207cdc8f2e9a3e4a822d5f1131326afa2f5463cb
+        image: ghcr.io/sitardaniel/baghguard-slack-alerter:fa5049fd8059f93e0c0907b53d3e6dfcbb410c5a
         # IfNotPresent, not Always: the tag is now the immutable commit SHA
         # that built it (bumped in this manifest by build-images.yml's
         # update-gitops-manifests job) - a given tag never points to a
