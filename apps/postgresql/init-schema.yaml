@@ -164,6 +164,56 @@ data:
       COALESCE(description, ''),
       COALESCE(line_number, -1)
     );
+
+    -- Exploit-intelligence enrichment (the `enricher` CronJob fills these from
+    -- the EPSS feed and CISA KEV catalog). `priority` is recomputed from
+    -- kev_listed + epss_score + severity so findings views can lead with what
+    -- is actually exploitable instead of raw CVSS. All idempotent, so this Job
+    -- keeps its name (the "rename for non-idempotent migrations" rule doesn't
+    -- apply here).
+    ALTER TABLE findings ADD COLUMN IF NOT EXISTS epss_score      REAL;
+    ALTER TABLE findings ADD COLUMN IF NOT EXISTS epss_percentile REAL;
+    ALTER TABLE findings ADD COLUMN IF NOT EXISTS kev_listed      BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE findings ADD COLUMN IF NOT EXISTS kev_added_date  DATE;
+    ALTER TABLE findings ADD COLUMN IF NOT EXISTS priority        TEXT;  -- URGENT|HIGH|MEDIUM|LOW
+    CREATE INDEX IF NOT EXISTS idx_findings_cve ON findings (cve_id);
+
+    -- Cross-scanner dedup identity. Two scanners reporting the same CVE for the
+    -- same package/repo share a fingerprint (scanner deliberately omitted), so
+    -- findings views can collapse trivy's and grype's copies into one row while
+    -- the underlying per-scanner rows (and idx_findings_dedup) stay intact.
+    -- Only real CVE-/GHSA- ids get scanner-independent grouping. checkov
+    -- check_ids and trivy IaC misconfig ids also live in cve_id but are
+    -- per-file/per-resource, so they keep scanner + file + line + description -
+    -- grouping them on id alone would collapse two distinct violations of the
+    -- same check into one row. The md5() expression MUST stay identical to
+    -- normalizer.py's _fingerprint() or new rows won't group with backfilled ones.
+    ALTER TABLE findings ADD COLUMN IF NOT EXISTS fingerprint TEXT;
+    CREATE INDEX IF NOT EXISTS idx_findings_fingerprint ON findings (fingerprint);
+
+    UPDATE findings SET fingerprint = CASE
+      WHEN upper(COALESCE(cve_id, '')) LIKE 'CVE-%' OR upper(COALESCE(cve_id, '')) LIKE 'GHSA-%' THEN
+        md5(lower(repo || '|' || cve_id || '|' || split_part(COALESCE(package, ''), ' ', 1)))
+      ELSE
+        md5(lower(COALESCE(scanner, '') || '|' || COALESCE(file_path, '') || '|'
+                  || COALESCE(line_number::text, '') || '|' || COALESCE(description, '')))
+      END
+    WHERE fingerprint IS NULL;
+
+    -- In-dashboard user feedback. user_id is nullable/SET NULL so feedback
+    -- survives an account deletion as anonymous rather than vanishing. The
+    -- email-alerter's daily loop emails a digest of rows where notified_at IS
+    -- NULL, then stamps them so they aren't re-sent.
+    CREATE TABLE IF NOT EXISTS feedback (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+      category    TEXT,                        -- bug | idea | other
+      message     TEXT NOT NULL,
+      page        TEXT,                        -- where it was sent from
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      notified_at TIMESTAMPTZ                  -- set once included in a digest
+    );
+    CREATE INDEX IF NOT EXISTS idx_feedback_unnotified ON feedback (created_at) WHERE notified_at IS NULL;
 ---
 apiVersion: batch/v1
 kind: Job
