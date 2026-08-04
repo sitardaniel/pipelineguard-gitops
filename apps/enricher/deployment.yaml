@@ -1,0 +1,53 @@
+# Named deployment.yaml (not cronjob.yaml) so build-images.yml's tag-bump job -
+# which rewrites apps/<service>/deployment.yaml - pins this image on every build,
+# same as every other service. It is a CronJob, not a Deployment.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: enricher
+  namespace: baghguard
+spec:
+  schedule: "30 5 * * *"          # daily; EPSS/KEV feeds refresh once a day
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: enricher
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: enricher
+            # :latest until the first build; build-images.yml's bump job then
+            # pins the immutable commit SHA here (IfNotPresent relies on that).
+            image: ghcr.io/sitardaniel/baghguard-enricher:latest
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: DB_HOST
+              value: postgresql
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: baghguard
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: POSTGRES_PASSWORD
+            resources:
+              limits:
+                memory: "256Mi"
+                cpu: "250m"
+              requests:
+                memory: "128Mi"
+                cpu: "100m"

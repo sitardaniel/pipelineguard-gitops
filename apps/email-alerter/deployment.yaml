@@ -67,6 +67,15 @@ spec:
               name: email-alerter-secret
               key: alert-email-from
               optional: true
+        # Team inbox for the in-dashboard user-feedback digest. optional:true so
+        # the alerter still runs if it's unset; the digest just stays a no-op
+        # until email-alerter-secret gains an alert-email-to key.
+        - name: ALERT_EMAIL_TO
+          valueFrom:
+            secretKeyRef:
+              name: email-alerter-secret
+              key: alert-email-to
+              optional: true
         - name: OPA_URL
           value: "http://opa:8181"
         - name: CHECK_INTERVAL_SECONDS
